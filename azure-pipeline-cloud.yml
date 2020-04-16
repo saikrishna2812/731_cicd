@@ -1,0 +1,42 @@
+# Talend CI/CD on Azure DevOps
+# Build Pipeline for building and publishing on Talend Cloud
+
+trigger: none
+pool:
+ vmImage: 'ubuntu-latest'
+
+variables:
+- group: variables
+- name: project_name
+  value: 'SAICICD'
+- name: artifact_name
+  value: 'job1'
+- name: artifact_version
+  value: '0.1'
+- name: docker_image_name
+  value: 'cicd4talend'
+
+steps:
+  - task: DownloadSecureFile@1
+    name: settings_xml
+    inputs:
+      secureFile: settings.xml
+
+  - task: DownloadSecureFile@1
+    name: license
+    inputs:
+      secureFile: license
+
+  - task: Maven@3
+    inputs:
+        mavenPomFile: '$(project_name)/poms/pom.xml' 
+        mavenOptions: |
+          -Dlicense.path=$(license.secureFilePath)
+          -Dupdatesite.path=$(updatesite_path)
+          -Dservice.url=$(cloud_url)
+          -Dcloud.publisher.screenshot=true
+          -Dcloud.publisher.environment=dev
+          -Dcloud.publisher.workspace=CICD
+          -Xmx3096m -Xms1024m
+        options: '--settings $(settings_xml.secureFilePath) -Pcloud-publisher -pl jobs/process/$(artifact_name)_$(artifact_version) -am'
+        goals: 'deploy'
